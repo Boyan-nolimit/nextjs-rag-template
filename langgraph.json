@@ -1,0 +1,8 @@
+{
+  "node_version": "22",
+  "graphs": {
+    "rag-assistant": "./src/lib/graphs/searchGraph.ts:searchGraph"
+  },
+  "env": ".env",
+  "dependencies": ["."]
+}

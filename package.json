@@ -6,11 +6,14 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "langgraph-studio": "npx @langchain/langgraph-cli dev"
   },
   "dependencies": {
     "@langchain/community": "^0.3.53",
     "@langchain/langgraph": "^0.4.7",
+    "@langchain/langgraph-checkpoint-postgres": "^0.1.1",
+    "@neondatabase/serverless": "0.10.4",
     "next": "15.5.2",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^5.4.54",
@@ -26,6 +29,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
   }
 }

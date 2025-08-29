@@ -1,7 +1,7 @@
-import { Annotation, StateGraph, type LangGraphRunnableConfig } from "@langchain/langgraph";
+import { Annotation, StateGraph } from "@langchain/langgraph";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { llm } from "../llm";
-import { DOCS_NS } from "../store";
+import { getVectorStore } from "../vectorstore";
 
 export type Citation = { id: string; url?: string; score?: number };
 
@@ -12,23 +12,17 @@ const SearchState = Annotation.Root({
   citations: Annotation<Citation[]>()
 });
 
-async function retrieveNode(
-  state: typeof SearchState.State,
-  config: LangGraphRunnableConfig
-) {
-  const store = config.store;
-  if (!store) throw new Error("Missing store in config");
+async function retrieveNode(state: typeof SearchState.State) {
+  const vectorStore = await getVectorStore();
 
-  const results = await store.search(DOCS_NS as unknown as string[], {
-    query: state.question,
-    limit: 5
-  });
+  // Returns [Document, score][]
+  const results = await vectorStore.similaritySearchWithScore(state.question, 5);
 
-  const retrieved = results.map((r: any) => ({
-    id: r.key,
-    text: r.value?.text ?? "",
-    url: r.value?.url,
-    score: r.score ?? 0
+  const retrieved = results.map(([doc, score]) => ({
+    id: (doc.metadata as any)?.id ?? "",
+    text: doc.pageContent ?? "",
+    url: (doc.metadata as any)?.url ?? undefined,
+    score: typeof score === "number" ? score : 0
   }));
 
   return { retrieved };
@@ -43,15 +37,12 @@ async function generateNode(state: typeof SearchState.State) {
     new SystemMessage(
       `You are a concise assistant. Answer using ONLY the provided context. If the answer isn't in the context, say you don't know.`
     ),
-    new HumanMessage(
-      `Question: ${state.question}\n\nContext:\n${context}`
-    )
+    new HumanMessage(`Question: ${state.question}\n\nContext:\n${context}`)
   ];
 
   const completion = await llm.invoke(messages);
 
   const citations = state.retrieved.map((d) => ({ id: d.id, url: d.url, score: d.score }));
-
   return { answer: String(completion.content ?? ""), citations };
 }
 
@@ -61,4 +52,4 @@ export const searchGraph = new StateGraph(SearchState)
   .addEdge("__start__", "retrieve")
   .addEdge("retrieve", "generate")
   .addEdge("generate", "__end__")
-  .compile(); // supply `store` at invoke time
+  .compile();
